@@ -33,11 +33,12 @@ func editorCmd(args []string, send sendFn) (*client.CommandResponse, error) {
 		_, compile := flags["compile"]
 		if compile {
 			return send("refresh_unity", map[string]interface{}{
-				"compile":        "request",
-				"wait_for_ready": true,
+				"compile": "wait",
 			})
 		}
-		return send("refresh_unity", map[string]interface{}{})
+		return send("refresh_unity", map[string]interface{}{
+			"wait_for_ready": true,
+		})
 
 	default:
 		return nil, fmt.Errorf("unknown editor action: %s\nAvailable: play, stop, pause, refresh", action)

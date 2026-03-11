@@ -45,7 +45,8 @@ namespace UnityCliConnector.Tools
                 refreshTriggered = true;
             }
 
-            if (string.Equals(compile, "request", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(compile, "request", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(compile, "wait", StringComparison.OrdinalIgnoreCase))
             {
                 CompilationPipeline.RequestScriptCompilation();
                 compileRequested = true;
@@ -57,32 +58,33 @@ namespace UnityCliConnector.Tools
                 refreshTriggered = true;
             }
 
-#if UNITY_6000_0_OR_NEWER
-            bool shouldWaitForReady = waitForReady && !compileRequested;
-#else
-            bool shouldWaitForReady = waitForReady;
-#endif
-            if (shouldWaitForReady)
+            bool shouldWait = compileRequested
+                ? string.Equals(compile, "wait", StringComparison.OrdinalIgnoreCase)
+                : waitForReady;
+
+            if (shouldWait)
             {
-                await WaitForUnityReadyAsync(TimeSpan.FromSeconds(DefaultWaitTimeoutSeconds));
+                await WaitForCompileAndReady(TimeSpan.FromSeconds(DefaultWaitTimeoutSeconds));
             }
 
             string resultingState = EditorApplication.isCompiling
                 ? "compiling"
                 : (EditorApplication.isUpdating ? "asset_import" : "idle");
 
-            return new SuccessResponse("Refresh requested.", new
+            return new SuccessResponse(shouldWait ? "Refresh completed." : "Refresh requested.", new
             {
                 refresh_triggered = refreshTriggered,
                 compile_requested = compileRequested,
+                waited = shouldWait,
                 resulting_state = resultingState,
             });
         }
 
-        private static Task WaitForUnityReadyAsync(TimeSpan timeout)
+        private static Task WaitForCompileAndReady(TimeSpan timeout)
         {
             var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             var start = DateTime.UtcNow;
+            bool sawCompiling = EditorApplication.isCompiling;
 
             void Tick()
             {
@@ -93,7 +95,18 @@ namespace UnityCliConnector.Tools
                     tcs.TrySetException(new TimeoutException());
                     return;
                 }
-                if (!EditorApplication.isCompiling && !EditorApplication.isUpdating && !EditorApplication.isPlayingOrWillChangePlaymode)
+
+                if (!sawCompiling && EditorApplication.isCompiling)
+                    sawCompiling = true;
+
+                if (sawCompiling && !EditorApplication.isCompiling && !EditorApplication.isUpdating)
+                {
+                    EditorApplication.update -= Tick;
+                    tcs.TrySetResult(true);
+                    return;
+                }
+
+                if (!sawCompiling && !EditorApplication.isCompiling && !EditorApplication.isUpdating)
                 {
                     EditorApplication.update -= Tick;
                     tcs.TrySetResult(true);
