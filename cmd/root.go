@@ -52,6 +52,13 @@ func Execute() error {
 		return nil
 	case "update":
 		return updateCmd(subArgs)
+	case "status":
+		flag.CommandLine.Parse(extractFlags(args))
+		inst, err := client.DiscoverInstance(flagProject, flagPort)
+		if err != nil {
+			return err
+		}
+		return statusCmd(inst)
 	}
 
 	// Parse remaining flags
@@ -59,6 +66,10 @@ func Execute() error {
 
 	inst, err := client.DiscoverInstance(flagProject, flagPort)
 	if err != nil {
+		return err
+	}
+
+	if err := waitUntilReady(inst.Port, flagTimeout); err != nil {
 		return err
 	}
 
@@ -228,6 +239,9 @@ Custom Tools:
   tool call <name> --params '{"key":"val"}'
                                 Call a tool with JSON parameters
   tool help <name>              Show tool description
+
+Status:
+  status                        Show Unity Editor state (ready, compiling, etc.)
 
 Update:
   update                        Update to the latest version
