@@ -1,5 +1,7 @@
 # unity-cli
 
+[English](README.md) | [한국어](README.ko.md)
+
 > Control Unity Editor from the command line. Built for AI agents, works with anything.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -41,6 +43,16 @@ chmod +x unity-cli && sudo mv unity-cli /usr/local/bin/
 ```
 
 Supported platforms: Linux (amd64, arm64), macOS (Intel, Apple Silicon), Windows (amd64).
+
+### Update
+
+```bash
+# Update to the latest version
+unity-cli update
+
+# Check for updates without installing
+unity-cli update --check
+```
 
 ## Unity Setup
 
