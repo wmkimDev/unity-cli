@@ -6,36 +6,46 @@ using UnityEngine;
 
 namespace UnityCliConnector.Tools
 {
-    [UnityCliTool(Description = "Read Unity Profiler data and control profiler state. Actions: read_frames, enable, disable, status, clear.")]
+    [UnityCliTool(Description = "Control Unity Profiler. Actions: hierarchy, enable, disable, status, clear.")]
     public static class ManageProfiler
     {
         public class Parameters
         {
-            [ToolParameter("Action: read_frames, enable, disable, status, or clear", Required = true)]
+            [ToolParameter("Action: hierarchy, enable, disable, status, or clear", Required = true)]
             public string Action { get; set; }
 
-            [ToolParameter("Number of frames to read (default: 1, for read_frames action)")]
-            public int FrameCount { get; set; }
+            [ToolParameter("Frame index. -1 or omit = last captured frame.")]
+            public int Frame { get; set; }
 
-            [ToolParameter("Thread index to read (default: 0, for read_frames action)")]
-            public int Thread { get; set; }
+            [ToolParameter("Thread index. 0 = main thread.")]
+            public int ThreadIndex { get; set; }
 
-            [ToolParameter("Filter profiler samples by name")]
-            public string Filter { get; set; }
+            [ToolParameter("Parent item ID to drill into. Omit for root level.")]
+            public int ParentId { get; set; }
 
-            [ToolParameter("Minimum milliseconds threshold to include (default: 0.01)")]
-            public float MinMs { get; set; }
+            [ToolParameter("Minimum total time (ms) filter.")]
+            public float MinTime { get; set; }
+
+            [ToolParameter("Sort column: 'total', 'self', or 'calls'. Default 'total'.")]
+            public string SortBy { get; set; }
+
+            [ToolParameter("Max children per level. Default 30.")]
+            public int MaxItems { get; set; }
+
+            [ToolParameter("Recursive depth. 1 = one level (default), 0 = unlimited.")]
+            public int Depth { get; set; }
         }
 
         public static object HandleCommand(JObject parameters)
         {
-            var action = parameters["action"]?.Value<string>()?.ToLowerInvariant();
+            var p = new ToolParams(parameters);
+            var action = p.Get("action")?.ToLowerInvariant();
             if (string.IsNullOrEmpty(action))
-                return new ErrorResponse("'action' required. Valid: read_frames, enable, disable, status, clear.");
+                return new ErrorResponse("'action' required. Valid: hierarchy, enable, disable, status, clear.");
 
             switch (action)
             {
-                case "read_frames": return ReadFrames(parameters);
+                case "hierarchy": return Hierarchy(p);
                 case "enable":
                     UnityEngine.Profiling.Profiler.enabled = true;
                     ProfilerDriver.enabled = true;
@@ -57,52 +67,113 @@ namespace UnityCliConnector.Tools
                     ProfilerDriver.ClearAllFrames();
                     return new SuccessResponse("All profiler frames cleared.");
                 default:
-                    return new ErrorResponse($"Unknown action: '{action}'.");
+                    return new ErrorResponse($"Unknown action: '{action}'. Valid: hierarchy, enable, disable, status, clear.");
             }
         }
 
-        private static object ReadFrames(JObject parameters)
+        private static object Hierarchy(ToolParams p)
         {
-            if (!ProfilerDriver.enabled)
-                return new ErrorResponse("Profiler not enabled. Use action='enable' first.");
+            if (ProfilerDriver.enabled == false && ProfilerDriver.lastFrameIndex < 0)
+                return new ErrorResponse("Profiler has no captured data. Enable profiler first.");
 
-            int lastFrame = ProfilerDriver.lastFrameIndex, firstFrame = ProfilerDriver.firstFrameIndex;
-            if (lastFrame < 0 || firstFrame < 0)
-                return new ErrorResponse("No profiler frames available.");
+            var frameIndex = p.GetInt("frame", -1).Value;
+            if (frameIndex < 0) frameIndex = ProfilerDriver.lastFrameIndex;
+            if (frameIndex < ProfilerDriver.firstFrameIndex || frameIndex > ProfilerDriver.lastFrameIndex)
+                return new ErrorResponse(
+                    $"Frame {frameIndex} out of range [{ProfilerDriver.firstFrameIndex}..{ProfilerDriver.lastFrameIndex}]");
 
-            int frameCount = parameters["frameCount"]?.Value<int>() ?? 1;
-            int threadIndex = parameters["thread"]?.Value<int>() ?? 0;
-            string filter = parameters["filter"]?.Value<string>() ?? "";
-            float minMs = parameters["minMs"]?.Value<float>() ?? 0.01f;
+            var threadIndex = p.GetInt("threadIndex", 0).Value;
+            var parentIdToken = p.GetRaw("parentId");
+            var minTime = p.GetFloat("minTime", 0f).Value;
+            var sortBy = (p.Get("sortBy", "total")).ToLowerInvariant();
+            var maxItems = p.GetInt("maxItems", 30).Value;
+            if (maxItems <= 0) maxItems = 30;
+            var depth = p.GetInt("depth", 1).Value;
+            if (depth <= 0) depth = 999;
 
-            frameCount = System.Math.Min(frameCount, lastFrame - firstFrame + 1);
-            var frames = new List<object>();
-
-            for (int f = 0; f < frameCount; f++)
+            int sortColumn;
+            switch (sortBy)
             {
-                int frameIndex = lastFrame - f;
-                using var frameData = ProfilerDriver.GetRawFrameDataView(frameIndex, threadIndex);
-                if (frameData == null || !frameData.valid) continue;
-
-                var collected = new List<(string name, float ms, int children)>();
-                for (int i = 0; i < frameData.sampleCount; i++)
-                {
-                    float timeMs = frameData.GetSampleTimeMs(i);
-                    if (timeMs < minMs) continue;
-                    string name = frameData.GetSampleName(i);
-                    if (!string.IsNullOrEmpty(filter) && name.IndexOf(filter, System.StringComparison.OrdinalIgnoreCase) < 0) continue;
-                    collected.Add((name, timeMs, frameData.GetSampleChildrenCount(i)));
-                }
-                collected.Sort((a, b) => b.ms.CompareTo(a.ms));
-
-                var samples = new List<object>();
-                foreach (var s in collected)
-                    samples.Add(new { s.name, s.ms, s.children });
-
-                frames.Add(new { frameIndex, threadIndex, sampleCount = frameData.sampleCount, samples });
+                case "self": sortColumn = HierarchyFrameDataView.columnSelfTime; break;
+                case "calls": sortColumn = HierarchyFrameDataView.columnCalls; break;
+                default: sortColumn = HierarchyFrameDataView.columnTotalTime; break;
             }
 
-            return new SuccessResponse($"{frames.Count} frames read", new { frames });
+            using var frameData = ProfilerDriver.GetHierarchyFrameDataView(
+                frameIndex, threadIndex,
+                HierarchyFrameDataView.ViewModes.MergeSamplesWithTheSameName,
+                sortColumn, false);
+
+            if (frameData == null || frameData.valid == false)
+                return new ErrorResponse($"No profiler data for frame {frameIndex}, thread {threadIndex}.");
+
+            // Must traverse from root first — Unity lazy-initializes the hierarchy tree.
+            int rootId = frameData.GetRootItemID();
+            var rootChildIds = new List<int>();
+            frameData.GetItemChildren(rootId, rootChildIds);
+
+            int parentId;
+            if (parentIdToken == null || parentIdToken.Type == JTokenType.Null)
+                parentId = rootId;
+            else
+                parentId = parentIdToken.Value<int>();
+
+            var items = BuildChildren(frameData, parentId, minTime, maxItems, depth);
+
+            var parentName = parentIdToken != null && parentIdToken.Type != JTokenType.Null
+                ? frameData.GetItemName(parentId)
+                : "(root)";
+
+            var result = new JObject
+            {
+                ["frame"] = frameIndex,
+                ["threadIndex"] = threadIndex,
+                ["parentId"] = parentId,
+                ["parentName"] = parentName,
+                ["depth"] = depth >= 999 ? 0 : depth,
+                ["children"] = items,
+            };
+
+            return new SuccessResponse($"Hierarchy of '{parentName}' (frame {frameIndex})", result);
+        }
+
+        static JArray BuildChildren(HierarchyFrameDataView frameData, int parentId, float minTime, int maxItems, int remainingDepth)
+        {
+            var childIds = new List<int>();
+            frameData.GetItemChildren(parentId, childIds);
+
+            var items = new JArray();
+            int shown = 0;
+            foreach (var childId in childIds)
+            {
+                var totalTime = frameData.GetItemColumnDataAsFloat(childId, HierarchyFrameDataView.columnTotalTime);
+                if (totalTime < minTime) continue;
+                if (shown >= maxItems) break;
+                shown++;
+
+                var selfTime = frameData.GetItemColumnDataAsFloat(childId, HierarchyFrameDataView.columnSelfTime);
+                var calls = (int)frameData.GetItemColumnDataAsFloat(childId, HierarchyFrameDataView.columnCalls);
+
+                var item = new JObject
+                {
+                    ["itemId"] = childId,
+                    ["name"] = frameData.GetItemName(childId),
+                    ["totalMs"] = System.Math.Round(totalTime, 3),
+                    ["selfMs"] = System.Math.Round(selfTime, 3),
+                    ["calls"] = calls,
+                };
+
+                if (remainingDepth > 1)
+                {
+                    var subChildren = BuildChildren(frameData, childId, minTime, maxItems, remainingDepth - 1);
+                    if (subChildren.Count > 0)
+                        item["children"] = subChildren;
+                }
+
+                items.Add(item);
+            }
+
+            return items;
         }
     }
 }
