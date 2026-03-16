@@ -6,15 +6,19 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**No MCP protocol. No Python relay. No runtime dependencies. Just a single binary.**
+**No server to run. No config to write. No process to manage. Just type a command.**
 
-## Why not MCP?
+## Why this exists
 
-MCP-based Unity integrations ship tens of thousands of lines of code across Python relays, WebSocket bridges, JSON-RPC protocol layers, and runtime dependencies. The result is a system that's hard to install, hard to debug, and impossible to understand without reading the source.
+I wanted to control Unity from the terminal. The existing MCP-based integrations required Python runtimes, WebSocket relays, JSON-RPC protocol layers, config files, server processes that need to be started and stopped, tool registration ceremonies, and tens of thousands of lines of over-engineered code. All just to send a simple command to Unity.
 
-This project takes the opposite approach. The entire CLI is ~800 lines of Go (plus ~300 lines of help text). The Unity-side connector is ~1,700 lines of C#. There is no protocol layer, no relay process, no virtual environment — just an HTTP POST from a binary to Unity's built-in HttpListener.
+On top of that, every AI agent that wanted to use it needed its own MCP config and integration setup. The CLI doesn't care — any agent that can run a shell command can use it immediately.
 
-If you can run a shell command, you can control Unity. That's it.
+That felt wrong. If I can `curl` a URL, why do I need all that?
+
+So I built the opposite: a single binary that talks directly to Unity via HTTP. No server to run — the Unity package listens automatically. No config to write — it discovers Unity instances on its own. No tool registration — just call by name. No caching, no protocol layers, no ceremony.
+
+The entire CLI is ~800 lines of Go (plus ~300 lines of help text). The Unity-side connector is ~1,700 lines of C#. It's just a thin layer that lets you control Unity from the shell — nothing more. You install the binary, add the Unity package, and it works.
 
 ## Install
 
