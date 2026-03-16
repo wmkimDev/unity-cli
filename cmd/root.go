@@ -89,8 +89,8 @@ func Execute() error {
 		resp, err = consoleCmd(subArgs, send)
 	case "exec":
 		resp, err = execCmd(subArgs, send)
-	case "tool":
-		resp, err = toolCmd(subArgs, send)
+	case "list":
+		resp, err = send("list_tools", map[string]interface{}{})
 	case "profiler":
 		resp, err = profilerCmd(subArgs, send)
 	case "menu":
@@ -98,8 +98,15 @@ func Execute() error {
 	case "reserialize":
 		resp, err = reserializeCmd(subArgs, send)
 	default:
-		// Try as direct custom tool call
-		resp, err = send(category, map[string]interface{}{})
+		// Direct custom tool call
+		params := map[string]interface{}{}
+		flags := parseSubFlags(subArgs)
+		if raw, ok := flags["params"]; ok {
+			if jsonErr := json.Unmarshal([]byte(raw), &params); jsonErr != nil {
+				return fmt.Errorf("invalid JSON in --params: %w", jsonErr)
+			}
+		}
+		resp, err = send(category, params)
 	}
 
 	if err != nil {
@@ -252,11 +259,9 @@ Profiler:
   profiler clear                 Clear all captured frames
 
 Custom Tools:
-  tool list                     List all registered tools (built-in + custom)
-  tool call <name>              Call a tool with no parameters
-  tool call <name> --params '{"key":"val"}'
-                                Call a tool with JSON parameters
-  tool help <name>              Show tool description
+  list                          List all registered tools with parameter schemas
+  <name>                        Call a custom tool directly
+  <name> --params '{"k":"v"}'   Call with JSON parameters
 
 Status:
   status                        Show Unity Editor state (ready, compiling, etc.)
@@ -276,7 +281,7 @@ Notes:
   - Unity must be open with the Connector package installed
   - Multiple Unity instances: use --port or --project to select
   - Custom tools: any [UnityCliTool] class is auto-discovered
-  - Run 'tool list' to see all available tools
+  - Run 'list' to see all available tools
 `)
 }
 
@@ -384,22 +389,13 @@ Examples:
   unity-cli profiler hierarchy --min 0.5 --sort self
   unity-cli profiler enable
 `)
-	case "tool":
-		fmt.Print(`Usage: unity-cli tool <list|call|help> [options]
+	case "list":
+		fmt.Print(`Usage: unity-cli list
 
-Subcommands:
-  list                  List all registered tools with parameter schemas
-  call <name>           Call a tool with no parameters
-  call <name> --params '{"key":"val"}'
-                        Call a tool with JSON parameters
-  help <name>           Show tool description and parameters
+List all registered tools (built-in + custom) with parameter schemas.
 
-Examples:
-  unity-cli tool list
-  unity-cli tool call spawn_enemy --params '{"x":1,"y":0,"z":5}'
-  unity-cli tool help spawn_enemy
-
-See "unity-cli help custom-tools" for how to write custom tools.
+Example:
+  unity-cli list
 `)
 	case "status":
 		fmt.Print(`Usage: unity-cli status

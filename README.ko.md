@@ -261,21 +261,13 @@ unity-cli profiler status
 
 ```bash
 # 등록된 모든 도구 목록 (내장 + 프로젝트 커스텀)
-unity-cli tool list
+unity-cli list
 
-# 커스텀 도구 호출
-unity-cli tool call my_custom_tool --params '{"key": "value"}'
-
-# 도구 도움말
-unity-cli tool help my_custom_tool
-```
-
-인식되지 않는 명령어 이름은 커스텀 도구 호출로 직접 전달됩니다:
-
-```bash
-# 다음 두 명령은 동일합니다
+# 커스텀 도구를 이름으로 직접 호출
 unity-cli my_custom_tool
-unity-cli tool call my_custom_tool
+
+# 파라미터와 함께 호출
+unity-cli my_custom_tool --params '{"key": "value"}'
 ```
 
 ### 상태 확인
@@ -363,16 +355,7 @@ public static class SpawnEnemy
 }
 ```
 
-`Parameters` 클래스는 선택 사항이지만 권장됩니다. 있으면 `tool list`와 `tool help`에서 파라미터 이름, 타입, 설명, 필수 여부를 노출합니다 — AI 어시스턴트가 소스 코드를 읽지 않고도 도구 사용법을 알 수 있습니다.
-
-```bash
-$ unity-cli tool help spawn_enemy
-spawn_enemy — 지정 위치에 적 스폰
-  x        float    (필수) X 월드 좌표
-  y        float    (필수) Y 월드 좌표
-  z        float    (필수) Z 월드 좌표
-  prefab   string          Resources 폴더 내 프리팹 이름
-```
+`Parameters` 클래스는 선택 사항이지만 권장됩니다. 있으면 `unity-cli list`에서 파라미터 이름, 타입, 설명, 필수 여부를 노출합니다 — AI 어시스턴트가 소스 코드를 읽지 않고도 도구 사용법을 알 수 있습니다.
 
 ### 규칙
 

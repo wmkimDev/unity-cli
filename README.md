@@ -261,21 +261,13 @@ unity-cli profiler status
 
 ```bash
 # List all registered tools (built-in + project custom)
-unity-cli tool list
+unity-cli list
 
-# Call a custom tool
-unity-cli tool call my_custom_tool --params '{"key": "value"}'
-
-# Get tool help
-unity-cli tool help my_custom_tool
-```
-
-Any unrecognized command name is sent directly as a custom tool call:
-
-```bash
-# These two are equivalent
+# Call a custom tool directly by name
 unity-cli my_custom_tool
-unity-cli tool call my_custom_tool
+
+# Call with parameters
+unity-cli my_custom_tool --params '{"key": "value"}'
 ```
 
 ### Status
@@ -363,16 +355,7 @@ public static class SpawnEnemy
 }
 ```
 
-The `Parameters` class is optional but recommended. When present, `tool list` and `tool help` expose parameter names, types, descriptions, and required flags — so AI assistants can discover how to call your tool without reading the source code.
-
-```bash
-$ unity-cli tool help spawn_enemy
-spawn_enemy — Spawn an enemy at a position
-  x        float    (required) X world position
-  y        float    (required) Y world position
-  z        float    (required) Z world position
-  prefab   string              Prefab name in Resources folder
-```
+The `Parameters` class is optional but recommended. When present, `unity-cli list` exposes parameter names, types, descriptions, and required flags — so AI assistants can discover how to call your tool without reading the source code.
 
 ### Rules
 
