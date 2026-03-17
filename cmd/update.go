@@ -74,6 +74,7 @@ func updateCmd(args []string) error {
 		return fmt.Errorf("chmod failed: %w", err)
 	}
 
+	// Rename dance: backup → replace → cleanup, with restore on failure.
 	backup := exe + ".bak"
 	if err := os.Rename(exe, backup); err != nil {
 		return fmt.Errorf("backup failed: %w", err)
@@ -110,6 +111,7 @@ func fetchLatestRelease() (*ghRelease, error) {
 	return &release, nil
 }
 
+// findAsset finds the release asset matching the current OS and architecture.
 func findAsset(assets []ghAsset) *ghAsset {
 	suffix := fmt.Sprintf("%s-%s", runtime.GOOS, runtime.GOARCH)
 	for i, a := range assets {

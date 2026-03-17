@@ -145,6 +145,8 @@ func Execute() error {
 	return nil
 }
 
+// sendFn is the function signature for sending a command to Unity.
+// Injected into each command function so they can be tested without a real Unity connection.
 type sendFn func(command string, params interface{}) (*client.CommandResponse, error)
 
 func printResponse(resp *client.CommandResponse) {
@@ -179,6 +181,8 @@ func printResponse(resp *client.CommandResponse) {
 	}
 }
 
+// parseSubFlags parses --key value and --flag (boolean) pairs from subcommand args.
+// Non-flag args (no "--" prefix) are silently ignored.
 func parseSubFlags(args []string) map[string]string {
 	flags := map[string]string{}
 	for i := 0; i < len(args); i++ {
@@ -218,6 +222,8 @@ func setStr(flags map[string]string, params map[string]interface{}, flag, param 
 	}
 }
 
+// splitArgs separates global flags (--port, --project, --timeout) from subcommand args.
+// Global flags must be parsed by flag.CommandLine before the subcommand runs.
 func splitArgs(args []string) (flags, commands []string) {
 	for i := 0; i < len(args); i++ {
 		if args[i] == "--port" || args[i] == "--project" || args[i] == "--timeout" {

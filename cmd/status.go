@@ -10,6 +10,7 @@ import (
 	"github.com/youngwoocho02/unity-cli/internal/client"
 )
 
+// UnityStatus is written by the Connector's Heartbeat every 0.5s to ~/.unity-cli/status/{port}.json.
 type UnityStatus struct {
 	State        string `json:"state"`
 	ProjectPath  string `json:"projectPath"`
@@ -38,6 +39,7 @@ func statusCmd(inst *client.Instance) error {
 	return nil
 }
 
+// readStatus reads the heartbeat file written by the Connector for the given port.
 func readStatus(port int) (*UnityStatus, error) {
 	home, _ := os.UserHomeDir()
 	path := filepath.Join(home, ".unity-cli", "status", fmt.Sprintf("%d.json", port))

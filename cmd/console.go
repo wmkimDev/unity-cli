@@ -32,6 +32,7 @@ func consoleCmd(args []string, send sendFn) (*client.CommandResponse, error) {
 		case "log":
 			params["types"] = []string{"log"}
 		default:
+			// Unknown filter value → full type list + text search
 			params["types"] = []string{"error", "warning", "log"}
 			params["filterText"] = v
 		}

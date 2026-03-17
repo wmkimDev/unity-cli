@@ -12,6 +12,7 @@ import (
 	"time"
 )
 
+// Instance represents a running Unity Editor registered via the Connector package.
 type Instance struct {
 	ProjectPath  string `json:"projectPath"`
 	Port         int    `json:"port"`
@@ -20,11 +21,14 @@ type Instance struct {
 	RegisteredAt string `json:"registeredAt,omitempty"`
 }
 
+// CommandRequest is the JSON body sent to Unity's HTTP server.
 type CommandRequest struct {
 	Command string      `json:"command"`
 	Params  interface{} `json:"params"`
 }
 
+// CommandResponse is the JSON body returned by Unity.
+// Data is raw JSON so callers can unmarshal into any shape.
 type CommandResponse struct {
 	Success bool            `json:"success"`
 	Message string          `json:"message"`
@@ -36,6 +40,10 @@ func instancesPath() string {
 	return filepath.Join(home, ".unity-cli", "instances.json")
 }
 
+// DiscoverInstance finds a running Unity instance from instances.json.
+// If port > 0, skips discovery and connects directly.
+// If project is set, matches by project path substring.
+// Otherwise returns the last registered instance (most recently opened).
 func DiscoverInstance(project string, port int) (*Instance, error) {
 	if port > 0 {
 		return &Instance{ProjectPath: "override", Port: port}, nil
@@ -98,6 +106,7 @@ func Send(inst *Instance, command string, params interface{}, timeoutMs int) (*C
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil || len(respBody) == 0 {
+		// Some commands (e.g. play mode entry) close the connection before responding.
 		return &CommandResponse{
 			Success: true,
 			Message: fmt.Sprintf("%s sent (connection closed before response)", command),
@@ -106,6 +115,7 @@ func Send(inst *Instance, command string, params interface{}, timeoutMs int) (*C
 
 	var result CommandResponse
 	if err := json.Unmarshal(respBody, &result); err != nil {
+		// Unity sent a non-JSON body — treat as plain message.
 		return &CommandResponse{
 			Success: true,
 			Message: string(respBody),

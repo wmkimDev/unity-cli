@@ -26,7 +26,9 @@ func mockSend(wantCmd string, t *testing.T) (sendFn, *map[string]interface{}) {
 
 func TestConsoleCmd_Clear(t *testing.T) {
 	send, params := mockSend("read_console", t)
-	_, _ = consoleCmd([]string{"--clear"}, send)
+	if _, err := consoleCmd([]string{"--clear"}, send); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if (*params)["action"] != "clear" {
 		t.Errorf("expected action=clear, got %v", (*params)["action"])
 	}
@@ -34,7 +36,9 @@ func TestConsoleCmd_Clear(t *testing.T) {
 
 func TestConsoleCmd_Lines(t *testing.T) {
 	send, params := mockSend("read_console", t)
-	_, _ = consoleCmd([]string{"--lines", "50"}, send)
+	if _, err := consoleCmd([]string{"--lines", "50"}, send); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if (*params)["count"] != 50 {
 		t.Errorf("expected count=50, got %v", (*params)["count"])
 	}
@@ -55,7 +59,9 @@ func TestConsoleCmd_FilterMapping(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.filter, func(t *testing.T) {
 			send, params := mockSend("read_console", t)
-			_, _ = consoleCmd([]string{"--filter", tt.filter}, send)
+			if _, err := consoleCmd([]string{"--filter", tt.filter}, send); err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 			got, ok := (*params)["types"].([]string)
 			if !ok || !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("filter=%q: types=%v, want %v", tt.filter, got, tt.want)
@@ -66,7 +72,9 @@ func TestConsoleCmd_FilterMapping(t *testing.T) {
 
 func TestConsoleCmd_FilterTextFallback(t *testing.T) {
 	send, params := mockSend("read_console", t)
-	_, _ = consoleCmd([]string{"--filter", "NullRef"}, send)
+	if _, err := consoleCmd([]string{"--filter", "NullRef"}, send); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if (*params)["filterText"] != "NullRef" {
 		t.Errorf("expected filterText=NullRef, got %v", (*params)["filterText"])
 	}
@@ -75,7 +83,9 @@ func TestConsoleCmd_FilterTextFallback(t *testing.T) {
 func TestConsoleCmd_Stacktrace(t *testing.T) {
 	for _, v := range []string{"none", "short", "full"} {
 		send, params := mockSend("read_console", t)
-		_, _ = consoleCmd([]string{"--stacktrace", v}, send)
+		if _, err := consoleCmd([]string{"--stacktrace", v}, send); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 		if (*params)["stacktrace"] != v {
 			t.Errorf("stacktrace=%q: got %v", v, (*params)["stacktrace"])
 		}
@@ -84,8 +94,7 @@ func TestConsoleCmd_Stacktrace(t *testing.T) {
 
 func TestConsoleCmd_NoArgs(t *testing.T) {
 	send, _ := mockSend("read_console", t)
-	_, err := consoleCmd(nil, send)
-	if err != nil {
+	if _, err := consoleCmd(nil, send); err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
 }

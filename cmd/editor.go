@@ -6,6 +6,8 @@ import (
 	"github.com/youngwoocho02/unity-cli/internal/client"
 )
 
+// editorCmd controls Unity play mode and asset database.
+// port is needed for waitForReady (refresh --compile blocks until compilation finishes).
 func editorCmd(args []string, send sendFn, port int) (*client.CommandResponse, error) {
 	if len(args) == 0 {
 		return nil, fmt.Errorf("usage: unity-cli editor <play|stop|pause|refresh>")
@@ -47,4 +49,3 @@ func editorCmd(args []string, send sendFn, port int) (*client.CommandResponse, e
 		return nil, fmt.Errorf("unknown editor action: %s\nAvailable: play, stop, pause, refresh", action)
 	}
 }
-

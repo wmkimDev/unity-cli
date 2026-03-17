@@ -4,7 +4,9 @@ import "testing"
 
 func TestEditorCmd_Play(t *testing.T) {
 	send, params := mockSend("manage_editor", t)
-	_, _ = editorCmd([]string{"play"}, send, 0)
+	if _, err := editorCmd([]string{"play"}, send, 0); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if (*params)["action"] != "play" {
 		t.Errorf("expected action=play, got %v", (*params)["action"])
 	}
@@ -15,7 +17,9 @@ func TestEditorCmd_Play(t *testing.T) {
 
 func TestEditorCmd_PlayWait(t *testing.T) {
 	send, params := mockSend("manage_editor", t)
-	_, _ = editorCmd([]string{"play", "--wait"}, send, 0)
+	if _, err := editorCmd([]string{"play", "--wait"}, send, 0); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if (*params)["wait_for_completion"] != true {
 		t.Errorf("expected wait_for_completion=true, got %v", (*params)["wait_for_completion"])
 	}
@@ -23,7 +27,9 @@ func TestEditorCmd_PlayWait(t *testing.T) {
 
 func TestEditorCmd_Stop(t *testing.T) {
 	send, params := mockSend("manage_editor", t)
-	_, _ = editorCmd([]string{"stop"}, send, 0)
+	if _, err := editorCmd([]string{"stop"}, send, 0); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if (*params)["action"] != "stop" {
 		t.Errorf("expected action=stop, got %v", (*params)["action"])
 	}
@@ -31,7 +37,9 @@ func TestEditorCmd_Stop(t *testing.T) {
 
 func TestEditorCmd_Pause(t *testing.T) {
 	send, params := mockSend("manage_editor", t)
-	_, _ = editorCmd([]string{"pause"}, send, 0)
+	if _, err := editorCmd([]string{"pause"}, send, 0); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if (*params)["action"] != "pause" {
 		t.Errorf("expected action=pause, got %v", (*params)["action"])
 	}
@@ -39,8 +47,7 @@ func TestEditorCmd_Pause(t *testing.T) {
 
 func TestEditorCmd_Refresh(t *testing.T) {
 	send, _ := mockSend("refresh_unity", t)
-	_, err := editorCmd([]string{"refresh"}, send, 0)
-	if err != nil {
+	if _, err := editorCmd([]string{"refresh"}, send, 0); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 }

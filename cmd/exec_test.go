@@ -7,7 +7,9 @@ import (
 
 func TestExecCmd_Basic(t *testing.T) {
 	send, params := mockSend("execute_csharp", t)
-	_, _ = execCmd([]string{"Debug.Log(1)"}, send)
+	if _, err := execCmd([]string{"Debug.Log(1)"}, send); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if (*params)["code"] != "Debug.Log(1)" {
 		t.Errorf("expected code=Debug.Log(1), got %v", (*params)["code"])
 	}
@@ -15,7 +17,9 @@ func TestExecCmd_Basic(t *testing.T) {
 
 func TestExecCmd_Usings(t *testing.T) {
 	send, params := mockSend("execute_csharp", t)
-	_, _ = execCmd([]string{"Foo()", "--usings", "System,UnityEngine"}, send)
+	if _, err := execCmd([]string{"Foo()", "--usings", "System,UnityEngine"}, send); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	want := []string{"System", "UnityEngine"}
 	got, ok := (*params)["usings"].([]string)
 	if !ok || !reflect.DeepEqual(got, want) {
