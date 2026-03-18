@@ -292,8 +292,11 @@ unity-cli list
 # 커스텀 도구를 이름으로 직접 호출
 unity-cli my_custom_tool
 
-# 파라미터와 함께 호출
+# JSON 파라미터로 호출
 unity-cli my_custom_tool --params '{"key": "value"}'
+
+# 플래그 스타일 파라미터로 호출
+unity-cli spawn_enemy --x 1 --y 0 --z 5 --prefab Enemy
 ```
 
 ### 상태 확인
@@ -345,7 +348,9 @@ using Newtonsoft.Json.Linq;
 public static class SpawnEnemy
 {
     // 명령어 이름 자동 생성: "spawn_enemy"
-    // 호출: unity-cli spawn_enemy --params '{"x":1,"y":0,"z":5}'
+    // 호출:
+    //   unity-cli spawn_enemy --params '{"x":1,"y":0,"z":5}'
+    //   unity-cli spawn_enemy --x 1 --y 0 --z 5
 
     public class Parameters
     {
@@ -382,6 +387,13 @@ public static class SpawnEnemy
 ```
 
 `Parameters` 클래스는 선택 사항이지만 권장됩니다. 있으면 `unity-cli list`에서 파라미터 이름, 타입, 설명, 필수 여부를 노출합니다 — AI 어시스턴트가 소스 코드를 읽지 않고도 도구 사용법을 알 수 있습니다.
+
+커스텀 도구 인자는 두 가지 방식으로 전달할 수 있습니다:
+
+- `--params '{"key":"value"}'` 형태의 raw JSON
+- `--key value` 형태의 단순 플래그 인자
+
+둘 다 함께 쓰면 `--params` 쪽 값이 우선합니다.
 
 ### 규칙
 

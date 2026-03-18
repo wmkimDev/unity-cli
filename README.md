@@ -292,8 +292,11 @@ unity-cli list
 # Call a custom tool directly by name
 unity-cli my_custom_tool
 
-# Call with parameters
+# Call with JSON parameters
 unity-cli my_custom_tool --params '{"key": "value"}'
+
+# Call with flag-style parameters
+unity-cli spawn_enemy --x 1 --y 0 --z 5 --prefab Enemy
 ```
 
 ### Status
@@ -345,7 +348,9 @@ using Newtonsoft.Json.Linq;
 public static class SpawnEnemy
 {
     // Command name auto-derived: "spawn_enemy"
-    // Call with: unity-cli spawn_enemy --params '{"x":1,"y":0,"z":5}'
+    // Call with:
+    //   unity-cli spawn_enemy --params '{"x":1,"y":0,"z":5}'
+    //   unity-cli spawn_enemy --x 1 --y 0 --z 5
 
     public class Parameters
     {
@@ -382,6 +387,13 @@ public static class SpawnEnemy
 ```
 
 The `Parameters` class is optional but recommended. When present, `unity-cli list` exposes parameter names, types, descriptions, and required flags — so AI assistants can discover how to call your tool without reading the source code.
+
+Custom tool arguments can be passed in two ways:
+
+- `--params '{"key":"value"}'` for raw JSON
+- `--key value` for simple flag-style arguments
+
+When both are present, keys from `--params` take precedence.
 
 ### Rules
 
